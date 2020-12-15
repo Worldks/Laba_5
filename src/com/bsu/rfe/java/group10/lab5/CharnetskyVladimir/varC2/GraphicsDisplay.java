@@ -10,6 +10,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.awt.font.FontRenderContext;
+import java.awt.geom.GeneralPath;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.text.DecimalFormat;
@@ -26,6 +27,13 @@ public class GraphicsDisplay extends JPanel{
     private double maxX;
     private double minY;
     private double maxY;
+
+    private double dx = 0;
+    private double dy = 0;
+
+    private double Dx = 0;
+    private double Dy = 0;
+
     private double[][] viewport = new double[2][2];
     private ArrayList<double[][]> undoHistory = new ArrayList(5);
     private ArrayList<double[][]> undoHistory_2 = new ArrayList(5);
@@ -40,11 +48,16 @@ public class GraphicsDisplay extends JPanel{
     private static DecimalFormat formatter = (DecimalFormat)NumberFormat.getInstance();
     private boolean scaleMode = false; //для приблиения
     private boolean changeMode = false; //для изменения значений графика
+
+    private boolean changeView = false;// Для передвижения графика и всех его сотавляющих
+
     private double[] originalPoint = new double[2];
 
     private double[] originalPoint_2 = new double[2];
 
     private java.awt.geom.Rectangle2D.Double selectionRect = new java.awt.geom.Rectangle2D.Double();
+
+    int a = 0;
 
     public GraphicsDisplay() {
         this.setBackground(Color.WHITE);
@@ -258,25 +271,86 @@ public class GraphicsDisplay extends JPanel{
         FontRenderContext context = canvas.getFontRenderContext();
         Rectangle2D bounds;
         java.awt.geom.Point2D.Double labelPos;
-        if (this.viewport[0][0] <= 0.0D && this.viewport[1][0] >= 0.0D) {
-            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(0.0D, this.viewport[0][1]), this.translateXYtoPoint(0.0D, this.viewport[1][1])));
-            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(-(this.viewport[1][0] - this.viewport[0][0]) * 0.0025D, this.viewport[0][1] - (this.viewport[0][1] - this.viewport[1][1]) * 0.015D), this.translateXYtoPoint(0.0D, this.viewport[0][1])));
-            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint((this.viewport[1][0] - this.viewport[0][0]) * 0.0025D, this.viewport[0][1] - (this.viewport[0][1] - this.viewport[1][1]) * 0.015D), this.translateXYtoPoint(0.0D, this.viewport[0][1])));
+
+        if (!changeView && this.viewport[0][0] <= 0.0D && this.viewport[1][0] >= 0.0D && Dx == 0) {
+            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(0.0D, this.viewport[0][1]), this.translateXYtoPoint(dx, this.viewport[1][1]))); //рисуется ось Oy от (0,maxY) до (0,minY)
+
+            GeneralPath arrow = new GeneralPath();      // Стрелка оси Y
+            Point2D.Double lineEnd = translateXYtoPoint(0.0D, viewport[0][1]);// Установить начальную точку ломаной точно на верхний конец оси Y
+            arrow.moveTo(lineEnd.getX(), lineEnd.getY());
+            // Вести левый "скат" стрелки в точку с относительными координатами (5,20)
+            arrow.lineTo(arrow.getCurrentPoint().getX() + 5, arrow.getCurrentPoint().getY() + 20);
+            // Вести нижнюю часть стрелки в точку с относительными координатами (-10, 0)
+            arrow.lineTo(arrow.getCurrentPoint().getX() - 10, arrow.getCurrentPoint().getY());
+            arrow.closePath();  // Замкнуть треугольник стрелки
+            canvas.draw(arrow); // Нарисовать стрелку
+            canvas.fill(arrow); // Закрасить стрелку
+
             bounds = this.axisFont.getStringBounds("y", context);
             labelPos = this.translateXYtoPoint(0.0D, this.viewport[0][1]);
-            canvas.drawString("y", (float)labelPos.x + 10.0F, (float)(labelPos.y + bounds.getHeight() / 2.0D));
+            canvas.drawString("y", (float)labelPos.x + 10.0F, (float)(labelPos.y + bounds.getHeight() / 2.0D));// Послдение три строки рисуют нпдпись для оси Oy
         }
 
-        if (this.viewport[1][1] <= 0.0D && this.viewport[0][1] >= 0.0D) {
-            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], 0.0D), this.translateXYtoPoint(this.viewport[1][0], 0.0D)));
-            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[1][0] - (this.viewport[1][0] - this.viewport[0][0]) * 0.01D, (this.viewport[0][1] - this.viewport[1][1]) * 0.005D), this.translateXYtoPoint(this.viewport[1][0], 0.0D)));
-            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[1][0] - (this.viewport[1][0] - this.viewport[0][0]) * 0.01D, -(this.viewport[0][1] - this.viewport[1][1]) * 0.005D), this.translateXYtoPoint(this.viewport[1][0], 0.0D)));
+        if (!changeView && this.viewport[1][1] <= 0.0D && this.viewport[0][1] >= 0.0D && Dy == 0) {
+            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], 0.0D), this.translateXYtoPoint(this.viewport[1][0], 0.0D)));//рисуется ось Ox
+
+            GeneralPath arrow = new GeneralPath();  // Стрелка оси X
+            Point2D.Double lineEnd = translateXYtoPoint(viewport[1][0], 0);
+            arrow.moveTo(lineEnd.getX(), lineEnd.getY());
+            arrow.lineTo(arrow.getCurrentPoint().getX() - 20, arrow.getCurrentPoint().getY() - 5);
+            arrow.lineTo(arrow.getCurrentPoint().getX(), arrow.getCurrentPoint().getY() + 10);
+            arrow.closePath();  // Замкнуть треугольник стрелки
+            canvas.draw(arrow); // Нарисовать стрелку
+            canvas.fill(arrow); // Закрасить стрелку
+
             bounds = this.axisFont.getStringBounds("x", context);
             labelPos = this.translateXYtoPoint(this.viewport[1][0], 0.0D);
-            canvas.drawString("x", (float)(labelPos.x - bounds.getWidth() - 10.0D), (float)(labelPos.y - bounds.getHeight() / 2.0D));
+            canvas.drawString("x", (float)(labelPos.x - bounds.getWidth() - 10.0D), (float)(labelPos.y - bounds.getHeight() / 2.0D));// Послдение три строки рисуют нпдпись для оси Ox
+            a++;
         }
 
-    }//
+        if (a != 0 && this.viewport[0][0] <= 0.0D && this.viewport[1][0] >= 0.0D) {
+            if (changeView) {
+                Dx += dx;
+                dx = 0 ;
+                canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(Dx, this.viewport[0][1]), this.translateXYtoPoint(Dx, this.viewport[1][1]))); //рисуется ось Oy от (0,maxY) до (0,minY)
+            GeneralPath arrow = new GeneralPath();      // Стрелка оси Y
+            Point2D.Double lineEnd = translateXYtoPoint(Dx, viewport[0][1]);// Установить начальную точку ломаной точно на верхний конец оси Y
+            arrow.moveTo(lineEnd.getX(), lineEnd.getY());
+            arrow.lineTo(arrow.getCurrentPoint().getX() + 5, arrow.getCurrentPoint().getY() + 20);
+            arrow.lineTo(arrow.getCurrentPoint().getX() - 10, arrow.getCurrentPoint().getY());
+            arrow.closePath();  // Замкнуть треугольник стрелки
+            canvas.draw(arrow); // Нарисовать стрелку
+            canvas.fill(arrow); // Закрасить стрелку
+
+            bounds = this.axisFont.getStringBounds("y", context);
+            labelPos = this.translateXYtoPoint(Dx, this.viewport[0][1]);
+            canvas.drawString("y", (float)labelPos.x + 10.0F, (float)(labelPos.y + bounds.getHeight() / 2.0D));// Послдение три строки рисуют нпдпись для оси Oy
+            }
+        }
+
+        if (a != 0 && this.viewport[1][1] <= 0.0D && this.viewport[0][1] >= 0.0D) {
+            if (changeView){
+                Dy += dy;
+                dy = 0;
+                canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], Dy), this.translateXYtoPoint(this.viewport[1][0], Dy)));//рисуется ось Ox
+            GeneralPath arrow = new GeneralPath();  // Стрелка оси X
+            Point2D.Double lineEnd = translateXYtoPoint(viewport[1][0], Dy);
+            arrow.moveTo(lineEnd.getX(), lineEnd.getY());
+            arrow.lineTo(arrow.getCurrentPoint().getX() - 20, arrow.getCurrentPoint().getY() - 5);
+            arrow.lineTo(arrow.getCurrentPoint().getX(), arrow.getCurrentPoint().getY() + 10);
+            arrow.closePath();  // Замкнуть треугольник стрелки
+            canvas.draw(arrow); // Нарисовать стрелку
+            canvas.fill(arrow); // Закрасить стрелку
+
+            bounds = this.axisFont.getStringBounds("x", context);
+            labelPos = this.translateXYtoPoint(this.viewport[1][0], Dy);
+            canvas.drawString("x", (float)(labelPos.x - bounds.getWidth() - 10.0D), (float)(labelPos.y - bounds.getHeight() / 2.0D));// Послдение три строки рисуют нпдпись для оси Ox
+            }
+        }
+
+
+    }//Рисует Оси и их стрелки
 
     protected java.awt.geom.Point2D.Double translateXYtoPoint(double x, double y) {
         double deltaX = x - this.viewport[0][0];
@@ -374,18 +448,23 @@ public class GraphicsDisplay extends JPanel{
                 double[] finalPoint = GraphicsDisplay.this.translatePointToXY(ev.getX(), ev.getY());// Последняя координата
                 GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(0));
 
-                double dx = finalPoint[0] - originalPoint_2[0];
-                double dy = finalPoint[1] - originalPoint_2[1];
+                dx = finalPoint[0] - originalPoint_2[0];
+                dy = finalPoint[1] - originalPoint_2[1];
                 System.out.println("x = " + finalPoint[0] + " y = " + finalPoint[1] + " End Point");
                 System.out.println("dx = "+ dx + " dy = " + dy);
 
                 double VectorSmechenia = Math.sqrt ((dx * dx) + (dy * dy));
                 System.out.println("VectorSmechenia = " + VectorSmechenia);
                 System.out.println(" ");
+
+                if (VectorSmechenia > 0){
+                    changeView = true;//-------------------------------------------
+                }
+                GraphicsDisplay.this.repaint();
             }
 
         }
-    }//Для отслеживания нажатий кнопок мыши
+    }//Для отслеживания нажатий кнопок мыши    ----------- ПРИДУМАЙ УСЛОВИЕ ВЫКЛЮЧЕНИЯ changeView ------------------------
 
     public class MouseMotionHandler implements MouseMotionListener {
         public MouseMotionHandler() {
