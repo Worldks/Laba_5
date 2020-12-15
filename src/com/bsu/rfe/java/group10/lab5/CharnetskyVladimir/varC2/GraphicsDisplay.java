@@ -57,7 +57,7 @@ public class GraphicsDisplay extends JPanel{
 
     private java.awt.geom.Rectangle2D.Double selectionRect = new java.awt.geom.Rectangle2D.Double();
 
-    int a = 0;
+    int a = 0;// Для осей
 
     public GraphicsDisplay() {
         this.setBackground(Color.WHITE);
@@ -218,31 +218,62 @@ public class GraphicsDisplay extends JPanel{
         java.awt.geom.Point2D.Double point;
         String label;
         Rectangle2D bounds;
-        for(step = (this.viewport[1][0] - this.viewport[0][0]) / 10.0D; pos < this.viewport[1][0]; pos += step) {
-            point = this.translateXYtoPoint(pos, labelYPos);
-            label = formatter.format(pos);
-            bounds = this.labelsFont.getStringBounds(label, context);
-            canvas.drawString(label, (float)(point.getX() + 5.0D), (float)(point.getY() - bounds.getHeight()));
+
+        if(!changeView){
+            for(step = (this.viewport[1][0] - this.viewport[0][0]) / 10.0D; pos < this.viewport[1][0]; pos += step) {
+                point = this.translateXYtoPoint(pos, labelYPos);
+                label = formatter.format(pos);
+                bounds = this.labelsFont.getStringBounds(label, context);
+                canvas.drawString(label, (float)(point.getX() + 5.0D), (float)(point.getY() - bounds.getHeight()));
+            }
+
+            pos = this.viewport[1][1];
+
+            for(step = (this.viewport[0][1] - this.viewport[1][1]) / 10.0D; pos < this.viewport[0][1]; pos += step) {
+                point = this.translateXYtoPoint(labelXPos, pos);
+                label = formatter.format(pos);
+                bounds = this.labelsFont.getStringBounds(label, context);
+                canvas.drawString(label, (float)(point.getX() + 5.0D), (float)(point.getY() - bounds.getHeight()));
+            }
+
+            if (this.selectedMarker >= 0) {
+                point = this.translateXYtoPoint(((Double[])this.graphicsData.get(this.selectedMarker))[0], ((Double[])this.graphicsData.get(this.selectedMarker))[1]);
+                label = "X=" + formatter.format(((Double[])this.graphicsData.get(this.selectedMarker))[0]) + ", Y=" + formatter.format(((Double[])this.graphicsData.get(this.selectedMarker))[1]);
+                bounds = this.labelsFont.getStringBounds(label, context);
+                canvas.setColor(Color.BLUE);
+                canvas.drawString(label, (float)(point.getX() + 5.0D), (float)(point.getY() - bounds.getHeight()));
+            }
+        }
+        else{
+            Dx += dx;
+            Dy += dy;
+            for(step = (this.viewport[1][0] - this.viewport[0][0]) / 10.0D; pos < this.viewport[1][0]; pos += step) {
+                point = this.translateXYtoPoint(pos + Dx, labelYPos);
+                label = formatter.format(pos);
+                bounds = this.labelsFont.getStringBounds(label, context);
+                canvas.drawString(label, (float)(point.getX() + 5.0D), (float)(point.getY() - bounds.getHeight()));
+            }
+
+            pos = this.viewport[1][1];
+
+            for(step = (this.viewport[0][1] - this.viewport[1][1]) / 10.0D; pos < this.viewport[0][1]; pos += step) {
+                point = this.translateXYtoPoint(labelXPos, pos + Dy);
+                label = formatter.format(pos);
+                bounds = this.labelsFont.getStringBounds(label, context);
+                canvas.drawString(label, (float)(point.getX() + 5.0D), (float)(point.getY() - bounds.getHeight()));
+            }
+
+            if (this.selectedMarker >= 0) {
+                point = this.translateXYtoPoint(((Double[])this.graphicsData.get(this.selectedMarker))[0], ((Double[])this.graphicsData.get(this.selectedMarker))[1]);
+                label = "X=" + formatter.format(((Double[])this.graphicsData.get(this.selectedMarker))[0]) + ", Y=" + formatter.format(((Double[])this.graphicsData.get(this.selectedMarker))[1]);
+                bounds = this.labelsFont.getStringBounds(label, context);
+                canvas.setColor(Color.BLUE);
+                canvas.drawString(label, (float)(point.getX() + 5.0D), (float)(point.getY() - bounds.getHeight()));
+            }
         }
 
-        pos = this.viewport[1][1];
 
-        for(step = (this.viewport[0][1] - this.viewport[1][1]) / 10.0D; pos < this.viewport[0][1]; pos += step) {
-            point = this.translateXYtoPoint(labelXPos, pos);
-            label = formatter.format(pos);
-            bounds = this.labelsFont.getStringBounds(label, context);
-            canvas.drawString(label, (float)(point.getX() + 5.0D), (float)(point.getY() - bounds.getHeight()));
-        }
-
-        if (this.selectedMarker >= 0) {
-            point = this.translateXYtoPoint(((Double[])this.graphicsData.get(this.selectedMarker))[0], ((Double[])this.graphicsData.get(this.selectedMarker))[1]);
-            label = "X=" + formatter.format(((Double[])this.graphicsData.get(this.selectedMarker))[0]) + ", Y=" + formatter.format(((Double[])this.graphicsData.get(this.selectedMarker))[1]);
-            bounds = this.labelsFont.getStringBounds(label, context);
-            canvas.setColor(Color.BLUE);
-            canvas.drawString(label, (float)(point.getX() + 5.0D), (float)(point.getY() - bounds.getHeight()));
-        }
-
-    }//
+    }//Подписывает "деления" на сетке ------- Проверить SelectedMarker в этом методе ----------
 
     private void paintGrid(Graphics2D canvas) {
         canvas.setStroke(this.gridStroke);
@@ -250,19 +281,39 @@ public class GraphicsDisplay extends JPanel{
         double pos = this.viewport[0][0];
 
         double step;
-        for(step = (this.viewport[1][0] - this.viewport[0][0]) / 10.0D; pos < this.viewport[1][0]; pos += step) {
-            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(pos, this.viewport[0][1]), this.translateXYtoPoint(pos, this.viewport[1][1])));
+        if (!changeView) {
+            for (step = (this.viewport[1][0] - this.viewport[0][0]) / 10.0D; pos < this.viewport[1][0]; pos += step) {
+                canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(pos, this.viewport[0][1]), this.translateXYtoPoint(pos, this.viewport[1][1])));// Рисует вертикальные прямые
+            }
+
+            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[1][0], this.viewport[0][1]), this.translateXYtoPoint(this.viewport[1][0], this.viewport[1][1])));//Самая крйняя правая вертикальная прямая
+            pos = this.viewport[1][1];
+
+            for (step = (this.viewport[0][1] - this.viewport[1][1]) / 10.0D; pos < this.viewport[0][1]; pos += step) {
+                canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], pos), this.translateXYtoPoint(this.viewport[1][0], pos)));//Рисует горизонтальные линии
+            }
+
+            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], this.viewport[0][1]), this.translateXYtoPoint(this.viewport[1][0], this.viewport[0][1])));//Самая верхняя горизонтальная линия
         }
+        else {
+            Dx += dx;
+            Dy += dy;
+            dx = 0;
+            dy = 0;
+            for (step = (this.viewport[1][0] - this.viewport[0][0]) / 10.0D; pos < this.viewport[1][0]; pos += step) {
+                canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(pos + Dx, this.viewport[0][1]), this.translateXYtoPoint(pos + Dx, this.viewport[1][1])));// Рисует вертикальные прямые
+            }
 
-        canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[1][0], this.viewport[0][1]), this.translateXYtoPoint(this.viewport[1][0], this.viewport[1][1])));
-        pos = this.viewport[1][1];
+            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[1][0], this.viewport[0][1]), this.translateXYtoPoint(this.viewport[1][0], this.viewport[1][1])));//Самая крйняя правая вертикальная прямая
+            pos = this.viewport[1][1];
 
-        for(step = (this.viewport[0][1] - this.viewport[1][1]) / 10.0D; pos < this.viewport[0][1]; pos += step) {
-            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], pos), this.translateXYtoPoint(this.viewport[1][0], pos)));
+            for (step = (this.viewport[0][1] - this.viewport[1][1]) / 10.0D; pos < this.viewport[0][1]; pos += step) {
+                canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], pos + Dy), this.translateXYtoPoint(this.viewport[1][0], pos + Dy)));//Рисует горизонтальные линии
+            }
+
+            canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], this.viewport[0][1]), this.translateXYtoPoint(this.viewport[1][0], this.viewport[0][1])));//Самая верхняя горизонтальная линия
         }
-
-        canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], this.viewport[0][1]), this.translateXYtoPoint(this.viewport[1][0], this.viewport[0][1])));
-    }//
+    }//Рисует сетку
 
     private void paintAxis(Graphics2D canvas) {
         canvas.setStroke(this.axisStroke);
@@ -272,7 +323,7 @@ public class GraphicsDisplay extends JPanel{
         Rectangle2D bounds;
         java.awt.geom.Point2D.Double labelPos;
 
-        if (!changeView && this.viewport[0][0] <= 0.0D && this.viewport[1][0] >= 0.0D && Dx == 0) {
+        if (!changeView && this.viewport[0][0] <= 0.0D && this.viewport[1][0] >= 0.0D && dx == 0) {
             canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(0.0D, this.viewport[0][1]), this.translateXYtoPoint(dx, this.viewport[1][1]))); //рисуется ось Oy от (0,maxY) до (0,minY)
 
             GeneralPath arrow = new GeneralPath();      // Стрелка оси Y
@@ -289,9 +340,9 @@ public class GraphicsDisplay extends JPanel{
             bounds = this.axisFont.getStringBounds("y", context);
             labelPos = this.translateXYtoPoint(0.0D, this.viewport[0][1]);
             canvas.drawString("y", (float)labelPos.x + 10.0F, (float)(labelPos.y + bounds.getHeight() / 2.0D));// Послдение три строки рисуют нпдпись для оси Oy
-        }
+        }//dx == 0
 
-        if (!changeView && this.viewport[1][1] <= 0.0D && this.viewport[0][1] >= 0.0D && Dy == 0) {
+        if (!changeView && this.viewport[1][1] <= 0.0D && this.viewport[0][1] >= 0.0D && dy == 0) {
             canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], 0.0D), this.translateXYtoPoint(this.viewport[1][0], 0.0D)));//рисуется ось Ox
 
             GeneralPath arrow = new GeneralPath();  // Стрелка оси X
@@ -307,12 +358,12 @@ public class GraphicsDisplay extends JPanel{
             labelPos = this.translateXYtoPoint(this.viewport[1][0], 0.0D);
             canvas.drawString("x", (float)(labelPos.x - bounds.getWidth() - 10.0D), (float)(labelPos.y - bounds.getHeight() / 2.0D));// Послдение три строки рисуют нпдпись для оси Ox
             a++;
-        }
+        }//dy == 0
 
         if (a != 0 && this.viewport[0][0] <= 0.0D && this.viewport[1][0] >= 0.0D) {
             if (changeView) {
                 Dx += dx;
-                dx = 0 ;
+                //dx = 0 ;
                 canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(Dx, this.viewport[0][1]), this.translateXYtoPoint(Dx, this.viewport[1][1]))); //рисуется ось Oy от (0,maxY) до (0,minY)
             GeneralPath arrow = new GeneralPath();      // Стрелка оси Y
             Point2D.Double lineEnd = translateXYtoPoint(Dx, viewport[0][1]);// Установить начальную точку ломаной точно на верхний конец оси Y
@@ -327,12 +378,12 @@ public class GraphicsDisplay extends JPanel{
             labelPos = this.translateXYtoPoint(Dx, this.viewport[0][1]);
             canvas.drawString("y", (float)labelPos.x + 10.0F, (float)(labelPos.y + bounds.getHeight() / 2.0D));// Послдение три строки рисуют нпдпись для оси Oy
             }
-        }
+        }// delete dx = 0;
 
         if (a != 0 && this.viewport[1][1] <= 0.0D && this.viewport[0][1] >= 0.0D) {
             if (changeView){
                 Dy += dy;
-                dy = 0;
+                //dy = 0;
                 canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], Dy), this.translateXYtoPoint(this.viewport[1][0], Dy)));//рисуется ось Ox
             GeneralPath arrow = new GeneralPath();  // Стрелка оси X
             Point2D.Double lineEnd = translateXYtoPoint(viewport[1][0], Dy);
@@ -347,7 +398,7 @@ public class GraphicsDisplay extends JPanel{
             labelPos = this.translateXYtoPoint(this.viewport[1][0], Dy);
             canvas.drawString("x", (float)(labelPos.x - bounds.getWidth() - 10.0D), (float)(labelPos.y - bounds.getHeight() / 2.0D));// Послдение три строки рисуют нпдпись для оси Ox
             }
-        }
+        }// delete dy = 0;
 
 
     }//Рисует Оси и их стрелки
