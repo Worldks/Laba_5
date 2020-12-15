@@ -28,6 +28,7 @@ public class GraphicsDisplay extends JPanel{
     private double maxY;
     private double[][] viewport = new double[2][2];
     private ArrayList<double[][]> undoHistory = new ArrayList(5);
+    private ArrayList<double[][]> undoHistory_2 = new ArrayList(5);
     private double scaleX;
     private double scaleY;
     private BasicStroke axisStroke;
@@ -37,9 +38,12 @@ public class GraphicsDisplay extends JPanel{
     private Font axisFont;
     private Font labelsFont;
     private static DecimalFormat formatter = (DecimalFormat)NumberFormat.getInstance();
-    private boolean scaleMode = false;
-    private boolean changeMode = false;
+    private boolean scaleMode = false; //для приблиения
+    private boolean changeMode = false; //для изменения значений графика
     private double[] originalPoint = new double[2];
+
+    private double[] originalPoint_2 = new double[2];
+
     private java.awt.geom.Rectangle2D.Double selectionRect = new java.awt.geom.Rectangle2D.Double();
 
     public GraphicsDisplay() {
@@ -82,7 +86,7 @@ public class GraphicsDisplay extends JPanel{
         }
 
         this.zoomToRegion(this.minX, this.maxY, this.maxX, this.minY);
-    }
+    }//Вызвав этот метод с начальными дынными нарисуем график
 
     public void zoomToRegion(double x1, double y1, double x2, double y2) {
         this.viewport[0][0] = x1;
@@ -90,13 +94,13 @@ public class GraphicsDisplay extends JPanel{
         this.viewport[1][0] = x2;
         this.viewport[1][1] = y2;
         this.repaint();
-    }
+    }//Установит диапазон значений графика вызовет зарисовку
 
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         this.scaleX = this.getSize().getWidth() / (this.viewport[1][0] - this.viewport[0][0]);
         this.scaleY = this.getSize().getHeight() / (this.viewport[0][1] - this.viewport[1][1]);
-        if (this.graphicsData != null && this.graphicsData.size() != 0) {
+        if (this.graphicsData != null && this.graphicsData.size() != 0) {// Есть ли данные по графику
             Graphics2D canvas = (Graphics2D)g;
             this.paintGrid(canvas);
             this.paintAxis(canvas);
@@ -105,7 +109,7 @@ public class GraphicsDisplay extends JPanel{
             this.paintLabels(canvas);
             this.paintSelection(canvas);
         }
-    }
+    }//Нарисует График оси сетку маркеры и др.
 
     private void paintSelection(Graphics2D canvas) {
         if (this.scaleMode) {
@@ -113,7 +117,7 @@ public class GraphicsDisplay extends JPanel{
             canvas.setColor(Color.BLACK);
             canvas.draw(this.selectionRect);
         }
-    }
+    }// Что он рисует связанное с мышью???????????? Предположительно штрихованный прямоугольник как новый фрейм
 
     private void paintGraphics(Graphics2D canvas) {
         canvas.setStroke(this.markerStroke);
@@ -134,7 +138,7 @@ public class GraphicsDisplay extends JPanel{
             }
         }
 
-    }
+    }//
 
     private void paintMarkers(Graphics2D canvas) {
         canvas.setStroke(this.markerStroke);
@@ -175,7 +179,7 @@ public class GraphicsDisplay extends JPanel{
             canvas.fill(lastMarker);
         }
 
-    }
+    }//
 
     private void paintLabels(Graphics2D canvas) {
         canvas.setColor(Color.BLACK);
@@ -225,7 +229,7 @@ public class GraphicsDisplay extends JPanel{
             canvas.drawString(label, (float)(point.getX() + 5.0D), (float)(point.getY() - bounds.getHeight()));
         }
 
-    }
+    }//
 
     private void paintGrid(Graphics2D canvas) {
         canvas.setStroke(this.gridStroke);
@@ -245,7 +249,7 @@ public class GraphicsDisplay extends JPanel{
         }
 
         canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], this.viewport[0][1]), this.translateXYtoPoint(this.viewport[1][0], this.viewport[0][1])));
-    }
+    }//
 
     private void paintAxis(Graphics2D canvas) {
         canvas.setStroke(this.axisStroke);
@@ -272,17 +276,17 @@ public class GraphicsDisplay extends JPanel{
             canvas.drawString("x", (float)(labelPos.x - bounds.getWidth() - 10.0D), (float)(labelPos.y - bounds.getHeight() / 2.0D));
         }
 
-    }
+    }//
 
     protected java.awt.geom.Point2D.Double translateXYtoPoint(double x, double y) {
         double deltaX = x - this.viewport[0][0];
         double deltaY = this.viewport[0][1] - y;
         return new java.awt.geom.Point2D.Double(deltaX * this.scaleX, deltaY * this.scaleY);
-    }
+    }//
 
     protected double[] translatePointToXY(int x, int y) {
         return new double[]{this.viewport[0][0] + (double)x / this.scaleX, this.viewport[0][1] - (double)y / this.scaleY};
-    }
+    }//
 
     protected int findSelectedPoint(int x, int y) {
         if (this.graphicsData == null) {
@@ -293,19 +297,19 @@ public class GraphicsDisplay extends JPanel{
             for(Iterator var5 = this.graphicsData.iterator(); var5.hasNext(); ++pos) {
                 Double[] point = (Double[])var5.next();
                 java.awt.geom.Point2D.Double screenPoint = this.translateXYtoPoint(point[0], point[1]);
-                double distance = (screenPoint.getX() - (double)x) * (screenPoint.getX() - (double)x) + (screenPoint.getY() - (double)y) * (screenPoint.getY() - (double)y);
+                double distance = (screenPoint.getX() - (double)x) * (screenPoint.getX() - (double)x) + (screenPoint.getY() - (double)y) * (screenPoint.getY() - (double)y);// Вроде квадрат гипотенузы
                 if (distance < 100.0D) {
-                    return pos;
+                    return pos;//Для чего pos?????????
                 }
             }
 
             return -1;
         }
-    }
+    }//
 
     public void reset() {
         this.displayGraphics(this.originalData);
-    }
+    }//
 
     public class MouseHandler extends MouseAdapter {
         public MouseHandler() {
@@ -328,17 +332,26 @@ public class GraphicsDisplay extends JPanel{
         public void mousePressed(MouseEvent ev) {
             if (ev.getButton() == 1) {
                 GraphicsDisplay.this.selectedMarker = GraphicsDisplay.this.findSelectedPoint(ev.getX(), ev.getY());
-                GraphicsDisplay.this.originalPoint = GraphicsDisplay.this.translatePointToXY(ev.getX(), ev.getY());
+                GraphicsDisplay.this.originalPoint = GraphicsDisplay.this.translatePointToXY(ev.getX(), ev.getY());// Начальная точка штрихованного прямоугольника
                 if (GraphicsDisplay.this.selectedMarker >= 0) {
                     GraphicsDisplay.this.changeMode = true;
-                    GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(8));
+                    GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(8));// устанавливает тип курсора РАССШИРЕНИЯ
                 } else {
                     GraphicsDisplay.this.scaleMode = true;
-                    GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(5));
-                    GraphicsDisplay.this.selectionRect.setFrame((double)ev.getX(), (double)ev.getY(), 1.0D, 1.0D);
+                    GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(5));// устанавливает тип курсора
+                    GraphicsDisplay.this.selectionRect.setFrame((double)ev.getX(), (double)ev.getY(), 1.0D, 1.0D);//Для рисовки штрихованного прямоугольника
                 }
 
             }
+
+            if(ev.getButton() == 2){
+
+                GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(1));// устанавливает тип курсора ПЕРЕМЕЩЕНИЕ
+                GraphicsDisplay.this.originalPoint_2 = GraphicsDisplay.this.translatePointToXY(ev.getX(), ev.getY());// Начальная точка
+                System.out.println("x = "+ originalPoint_2[0] + " y = " +   originalPoint_2[1] + " Start Point");
+
+            }
+
         }
 
         public void mouseReleased(MouseEvent ev) {
@@ -348,16 +361,31 @@ public class GraphicsDisplay extends JPanel{
                     GraphicsDisplay.this.changeMode = false;
                 } else {
                     GraphicsDisplay.this.scaleMode = false;
-                    double[] finalPoint = GraphicsDisplay.this.translatePointToXY(ev.getX(), ev.getY());
-                    GraphicsDisplay.this.undoHistory.add(GraphicsDisplay.this.viewport);
-                    GraphicsDisplay.this.viewport = new double[2][2];
-                    GraphicsDisplay.this.zoomToRegion(GraphicsDisplay.this.originalPoint[0], GraphicsDisplay.this.originalPoint[1], finalPoint[0], finalPoint[1]);
-                    GraphicsDisplay.this.repaint();
+                    double[] finalPoint = GraphicsDisplay.this.translatePointToXY(ev.getX(), ev.getY());// Последняя координата в штрифовоном прямоугольнике
+                    GraphicsDisplay.this.undoHistory.add(GraphicsDisplay.this.viewport);//Сохраняет диапозон значений графика перед "приближением"
+                    GraphicsDisplay.this.viewport = new double[2][2];//Создаёт новый диапазон
+                    GraphicsDisplay.this.zoomToRegion(GraphicsDisplay.this.originalPoint[0], GraphicsDisplay.this.originalPoint[1], finalPoint[0], finalPoint[1]);//Рисует "Приближение" по сути новый Фрейм
+                    GraphicsDisplay.this.repaint();//Зачем тут второй repaint если он вызовется в zoomToRegion
                 }
 
             }
+
+            if(ev.getButton() == 2){
+                double[] finalPoint = GraphicsDisplay.this.translatePointToXY(ev.getX(), ev.getY());// Последняя координата
+                GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(0));
+
+                double dx = finalPoint[0] - originalPoint_2[0];
+                double dy = finalPoint[1] - originalPoint_2[1];
+                System.out.println("x = " + finalPoint[0] + " y = " + finalPoint[1] + " End Point");
+                System.out.println("dx = "+ dx + " dy = " + dy);
+
+                double VectorSmechenia = Math.sqrt ((dx * dx) + (dy * dy));
+                System.out.println("VectorSmechenia = " + VectorSmechenia);
+                System.out.println(" ");
+            }
+
         }
-    }
+    }//Для отслеживания нажатий кнопок мыши
 
     public class MouseMotionHandler implements MouseMotionListener {
         public MouseMotionHandler() {
@@ -404,5 +432,5 @@ public class GraphicsDisplay extends JPanel{
             }
 
         }
-    }
+    }//Для отслеживания положения мыши на экране
 }
