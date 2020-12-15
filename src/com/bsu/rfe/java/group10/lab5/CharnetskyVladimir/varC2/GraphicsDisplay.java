@@ -139,18 +139,34 @@ public class GraphicsDisplay extends JPanel{
         Double currentY = null;
         Iterator var5 = this.graphicsData.iterator();
 
-        while(var5.hasNext()) {
-            Double[] point = (Double[])var5.next();
-            if (point[0] >= this.viewport[0][0] && point[1] <= this.viewport[0][1] && point[0] <= this.viewport[1][0] && point[1] >= this.viewport[1][1]) {
-                if (currentX != null && currentY != null) {
-                    canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(currentX, currentY), this.translateXYtoPoint(point[0], point[1])));
-                }
+        if(!changeView){
+            while (var5.hasNext()) {
+                Double[] point = (Double[]) var5.next();
+                if (point[0] >= this.viewport[0][0] && point[1] <= this.viewport[0][1] && point[0] <= this.viewport[1][0] && point[1] >= this.viewport[1][1]) {
+                    if (currentX != null && currentY != null) {
+                        canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(currentX, currentY), this.translateXYtoPoint(point[0], point[1])));
+                    }
 
-                currentX = point[0];
-                currentY = point[1];
+                    currentX = point[0];
+                    currentY = point[1];
+                }
             }
         }
+        else {
+            Dx += dx;
+            Dy += dy;
+            while (var5.hasNext()) {
+                Double[] point = (Double[]) var5.next();
+                if (point[0] >= this.viewport[0][0] && point[1] <= this.viewport[0][1] && point[0] <= this.viewport[1][0] && point[1] >= this.viewport[1][1]) {
+                    if (currentX != null && currentY != null) {
+                        canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(currentX, currentY), this.translateXYtoPoint(point[0] + Dx, point[1] + Dy)));
+                    }
 
+                    currentX = point[0] + Dx;
+                    currentY = point[1] + Dy;
+                }
+            }
+        }
     }//
 
     private void paintMarkers(Graphics2D canvas) {
@@ -161,29 +177,59 @@ public class GraphicsDisplay extends JPanel{
         int i = -1;
         Iterator var5 = this.graphicsData.iterator();
 
-        while(var5.hasNext()) {
-            Double[] point = (Double[])var5.next();
-            ++i;
-            if (point[0] >= this.viewport[0][0] && point[1] <= this.viewport[0][1] && point[0] <= this.viewport[1][0] && point[1] >= this.viewport[1][1]) {
-                byte radius;
-                if (i == this.selectedMarker) {
-                    radius = 6;
-                } else {
-                    radius = 3;
-                }
+        if(!changeView){
+            while(var5.hasNext()) {
+                Double[] point = (Double[])var5.next();
+                ++i;
+                if (point[0] >= this.viewport[0][0] && point[1] <= this.viewport[0][1] && point[0] <= this.viewport[1][0] && point[1] >= this.viewport[1][1]) {
+                    byte radius;
+                    if (i == this.selectedMarker) {
+                        radius = 6;
+                    } else {
+                        radius = 3;
+                    }
 
-                java.awt.geom.Ellipse2D.Double marker = new java.awt.geom.Ellipse2D.Double();
-                Point2D center = this.translateXYtoPoint(point[0], point[1]);
-                Point2D corner = new java.awt.geom.Point2D.Double(center.getX() + (double)radius, center.getY() + (double)radius);
-                marker.setFrameFromCenter(center, corner);
-                if (i == this.selectedMarker) {
-                    lastMarker = marker;
-                } else {
-                    canvas.draw(marker);
-                    canvas.fill(marker);
+                    java.awt.geom.Ellipse2D.Double marker = new java.awt.geom.Ellipse2D.Double();
+                    Point2D center = this.translateXYtoPoint(point[0], point[1]);
+                    Point2D corner = new java.awt.geom.Point2D.Double(center.getX() + (double)radius, center.getY() + (double)radius);
+                    marker.setFrameFromCenter(center, corner);
+                    if (i == this.selectedMarker) {
+                        lastMarker = marker;
+                    } else {
+                        canvas.draw(marker);
+                        canvas.fill(marker);
+                    }
                 }
             }
         }
+        else {
+            Dx += dx;
+            Dy += dy;
+            while(var5.hasNext()) {
+                Double[] point = (Double[])var5.next();
+                ++i;
+                if (point[0] >= this.viewport[0][0] && point[1] <= this.viewport[0][1] && point[0] <= this.viewport[1][0] && point[1] >= this.viewport[1][1]) {
+                    byte radius;
+                    if (i == this.selectedMarker) {
+                        radius = 6;
+                    } else {
+                        radius = 3;
+                    }
+
+                    java.awt.geom.Ellipse2D.Double marker = new java.awt.geom.Ellipse2D.Double();
+                    Point2D center = this.translateXYtoPoint(point[0] + Dx, point[1] + Dy);
+                    Point2D corner = new java.awt.geom.Point2D.Double(center.getX() + (double)radius, center.getY() + (double)radius);
+                    marker.setFrameFromCenter(center, corner);
+                    if (i == this.selectedMarker) {
+                        lastMarker = marker;
+                    } else {
+                        canvas.draw(marker);
+                        canvas.fill(marker);
+                    }
+                }
+            }
+        }
+
 
         if (lastMarker != null) {
             canvas.setColor(Color.BLUE);
@@ -271,8 +317,6 @@ public class GraphicsDisplay extends JPanel{
                 canvas.drawString(label, (float)(point.getX() + 5.0D), (float)(point.getY() - bounds.getHeight()));
             }
         }
-
-
     }//Подписывает "деления" на сетке ------- Проверить SelectedMarker в этом методе ----------
 
     private void paintGrid(Graphics2D canvas) {
