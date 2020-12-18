@@ -27,16 +27,12 @@ public class GraphicsDisplay extends JPanel{
     private double maxX;
     private double minY;
     private double maxY;
-
     private double dx = 0;
     private double dy = 0;
-
     private double Dx = 0;
     private double Dy = 0;
-
     private double[][] viewport = new double[2][2];
     private ArrayList<double[][]> undoHistory = new ArrayList(5);
-    private ArrayList<double[][]> undoHistory_2 = new ArrayList(5);
     private double scaleX;
     private double scaleY;
     private BasicStroke axisStroke;
@@ -48,13 +44,12 @@ public class GraphicsDisplay extends JPanel{
     private static DecimalFormat formatter = (DecimalFormat)NumberFormat.getInstance();
     private boolean scaleMode = false; //для приблиения
     private boolean changeMode = false; //для изменения значений графика
-
     private boolean changeView = false;// Для передвижения графика и всех его сотавляющих
-
-    private double[] originalPoint = new double[2];
-
+    private double[] originalPoint = new double[2];//Сохраняет позицию курсора (точки)
     private double[] originalPoint_2 = new double[2];
-
+    private double[] originalPoint_3 = new double[2];
+    private double[] finalPoint_2 = new double[2];
+    private double[] DELTA = new double[2];
     private java.awt.geom.Rectangle2D.Double selectionRect = new java.awt.geom.Rectangle2D.Double();
 
     int a = 0;// Для осей
@@ -130,7 +125,7 @@ public class GraphicsDisplay extends JPanel{
             canvas.setColor(Color.BLACK);
             canvas.draw(this.selectionRect);
         }
-    }// Что он рисует связанное с мышью???????????? Предположительно штрихованный прямоугольник как новый фрейм
+    }//  рисует Предположительно штрихованный прямоугольник как новый фрейм
 
     private void paintGraphics(Graphics2D canvas) {
         canvas.setStroke(this.markerStroke);
@@ -310,7 +305,7 @@ public class GraphicsDisplay extends JPanel{
             }
 
             if (this.selectedMarker >= 0) {
-                point = this.translateXYtoPoint(((Double[])this.graphicsData.get(this.selectedMarker))[0], ((Double[])this.graphicsData.get(this.selectedMarker))[1]);
+                point = this.translateXYtoPoint(((Double[])this.graphicsData.get(this.selectedMarker))[0] + Dx, ((Double[])this.graphicsData.get(this.selectedMarker))[1] + Dy);
                 label = "X=" + formatter.format(((Double[])this.graphicsData.get(this.selectedMarker))[0]) + ", Y=" + formatter.format(((Double[])this.graphicsData.get(this.selectedMarker))[1]);
                 bounds = this.labelsFont.getStringBounds(label, context);
                 canvas.setColor(Color.BLUE);
@@ -384,6 +379,7 @@ public class GraphicsDisplay extends JPanel{
             bounds = this.axisFont.getStringBounds("y", context);
             labelPos = this.translateXYtoPoint(0.0D, this.viewport[0][1]);
             canvas.drawString("y", (float)labelPos.x + 10.0F, (float)(labelPos.y + bounds.getHeight() / 2.0D));// Послдение три строки рисуют нпдпись для оси Oy
+            a++;
         }//dx == 0
 
         if (!changeView && this.viewport[1][1] <= 0.0D && this.viewport[0][1] >= 0.0D && dy == 0) {
@@ -457,24 +453,42 @@ public class GraphicsDisplay extends JPanel{
         return new double[]{this.viewport[0][0] + (double)x / this.scaleX, this.viewport[0][1] - (double)y / this.scaleY};
     }//
 
-    protected int findSelectedPoint(int x, int y) {
+    protected int findSelectedPoint(int x, int y) {// x and y это координаты мышки на панели
         if (this.graphicsData == null) {
             return -1;
         } else {
             int pos = 0;
 
-            for(Iterator var5 = this.graphicsData.iterator(); var5.hasNext(); ++pos) {
-                Double[] point = (Double[])var5.next();
-                java.awt.geom.Point2D.Double screenPoint = this.translateXYtoPoint(point[0], point[1]);
-                double distance = (screenPoint.getX() - (double)x) * (screenPoint.getX() - (double)x) + (screenPoint.getY() - (double)y) * (screenPoint.getY() - (double)y);// Вроде квадрат гипотенузы
-                if (distance < 100.0D) {
-                    return pos;//Для чего pos?????????
+           if(!changeView){
+                for(Iterator var5 = this.graphicsData.iterator(); var5.hasNext(); ++pos) {
+                    Double[] point = (Double[])var5.next();
+                    java.awt.geom.Point2D.Double screenPoint = this.translateXYtoPoint(point[0], point[1]);
+                    double distance = (screenPoint.getX() - (double)x) * (screenPoint.getX() - (double)x) + (screenPoint.getY() - (double)y) * (screenPoint.getY() - (double)y);// Вроде квадрат гипотенузы
+                    if (distance < 100.0D) {
+                        System.out.println("screenPoint.getX() " + screenPoint.getX() + " DELTA[0] " + GraphicsDisplay.this.DELTA[0] + " (double)x " + (double)x + " screenPoint.getY() " + screenPoint.getY() + " DELTA[1] " + GraphicsDisplay.this.DELTA[1] + " (double)y " + (double)y);
+                        return pos;//вернет номер точки в массиве от 0 до кол-во точек - 1
+                    }
+                }
+            }else {
+                for(Iterator var5 = this.graphicsData.iterator(); var5.hasNext(); ++pos) {
+                    Double[] point = (Double[])var5.next();
+                    java.awt.geom.Point2D.Double screenPoint = this.translateXYtoPoint(point[0], point[1]);
+                    double f = screenPoint.getX() - GraphicsDisplay.this.DELTA[0];
+                    double g = screenPoint.getY() - GraphicsDisplay.this.DELTA[1];
+                    //double distance = (screenPoint.getX() - (double)x) * (screenPoint.getX() - (double)x) + (screenPoint.getY() - (double)y) * (screenPoint.getY() - (double)y);// Вроде квадрат гипотенузы
+
+                    double distance = (f - (double)x) * (f - (double)x) + (g - (double)y) * (g - (double)y);// Вроде квадрат гипотенузы
+                    if (distance < 100.0D) {
+                        System.out.println("sP.getX() " + screenPoint.getX() + " DELTA[0] " + GraphicsDisplay.this.DELTA[0] +" f = " + f + " (d)x " + (double)x + " sP.getY() " + screenPoint.getY() + " DELTA[1] " + GraphicsDisplay.this.DELTA[1] +" g = " + g + " ()y " + (double)y);
+                        return pos;//вернет позицию точки графика в массиве
+                    }
                 }
             }
 
+
             return -1;
         }
-    }//
+    }//Получает позицию точки графика в массиве данных(других точек графика)
 
     public void reset() {
         this.displayGraphics(this.originalData);
@@ -500,25 +514,25 @@ public class GraphicsDisplay extends JPanel{
 
         public void mousePressed(MouseEvent ev) {
             if (ev.getButton() == 1) {
-                GraphicsDisplay.this.selectedMarker = GraphicsDisplay.this.findSelectedPoint(ev.getX(), ev.getY());
-                GraphicsDisplay.this.originalPoint = GraphicsDisplay.this.translatePointToXY(ev.getX(), ev.getY());// Начальная точка штрихованного прямоугольника
-                if (GraphicsDisplay.this.selectedMarker >= 0) {
+                GraphicsDisplay.this.selectedMarker = GraphicsDisplay.this.findSelectedPoint(ev.getX(), ev.getY());// Проверяет находиться ли курсор на точке графика
+                GraphicsDisplay.this.originalPoint = GraphicsDisplay.this.translatePointToXY(ev.getX(), ev.getY());// Начальная точка штрихованного прямоугольника или точки графика
+                if (GraphicsDisplay.this.selectedMarker >= 0) {// Если курсор находился на  точке графика
                     GraphicsDisplay.this.changeMode = true;
-                    GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(8));// устанавливает тип курсора РАССШИРЕНИЯ
-                } else {
+                    GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(8));// устанавливает тип курсора РАСТЯЖЕНИЯ ЭТО ДЛЯ ТОЧЕК ГРАФИКА
+                } else {// Если курсор находился не над точкой графика
                     GraphicsDisplay.this.scaleMode = true;
                     GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(5));// устанавливает тип курсора
-                    GraphicsDisplay.this.selectionRect.setFrame((double)ev.getX(), (double)ev.getY(), 1.0D, 1.0D);//Для рисовки штрихованного прямоугольника
+                    GraphicsDisplay.this.selectionRect.setFrame((double)ev.getX(), (double)ev.getY(), 1.0D, 1.0D);//Для рисовки штрихованного прямоугольника ЭТО ДЛЯ ПРЯМОУГОЛЬНИКА
                 }
 
             }
 
             if(ev.getButton() == 2){
-
                 GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(1));// устанавливает тип курсора ПЕРЕМЕЩЕНИЕ
+                GraphicsDisplay.this.originalPoint_3[0] = ev.getX();// Значения начала курсора в координатах точки
+                GraphicsDisplay.this.originalPoint_3[1] = ev.getY();
                 GraphicsDisplay.this.originalPoint_2 = GraphicsDisplay.this.translatePointToXY(ev.getX(), ev.getY());// Начальная точка
                 System.out.println("x = "+ originalPoint_2[0] + " y = " +   originalPoint_2[1] + " Start Point");
-
             }
 
         }
@@ -527,7 +541,7 @@ public class GraphicsDisplay extends JPanel{
             if (ev.getButton() == 1) {
                 GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(0));
                 if (GraphicsDisplay.this.changeMode) {
-                    GraphicsDisplay.this.changeMode = false;
+                    GraphicsDisplay.this.changeMode = false;//ОТКЛЮЧАЕТ ВОЗМОЖНОСТЬ РЕДАКТИРОВАНИЯ ТОЧЕК ГРАФИКА
                 } else {
                     GraphicsDisplay.this.scaleMode = false;
                     double[] finalPoint = GraphicsDisplay.this.translatePointToXY(ev.getX(), ev.getY());// Последняя координата в штрифовоном прямоугольнике
@@ -540,6 +554,12 @@ public class GraphicsDisplay extends JPanel{
             }
 
             if(ev.getButton() == 2){
+                GraphicsDisplay.this.finalPoint_2[0] = ev.getX();//Значения конца курсора в координатах точки
+                GraphicsDisplay.this.finalPoint_2[1] = ev.getY();
+
+                GraphicsDisplay.this.DELTA[0] += (GraphicsDisplay.this.originalPoint_3[0] - GraphicsDisplay.this.finalPoint_2[0]);// Дельта координат курсора в виде позиции точек
+                GraphicsDisplay.this.DELTA[1] += (GraphicsDisplay.this.originalPoint_3[1] - GraphicsDisplay.this.finalPoint_2[1]);
+
                 double[] finalPoint = GraphicsDisplay.this.translatePointToXY(ev.getX(), ev.getY());// Последняя координата
                 GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(0));
 
@@ -549,30 +569,31 @@ public class GraphicsDisplay extends JPanel{
                 System.out.println("dx = "+ dx + " dy = " + dy);
 
                 double VectorSmechenia = Math.sqrt ((dx * dx) + (dy * dy));
-                System.out.println("VectorSmechenia = " + VectorSmechenia);
+                System.out.println("VectorSmechenia = " + VectorSmechenia + " DELTA_X " + GraphicsDisplay.this.DELTA[0] + " DELTA_Y " + GraphicsDisplay.this.DELTA[1]);
                 System.out.println(" ");
 
                 if (VectorSmechenia > 0){
-                    changeView = true;//-------------------------------------------
+                    changeView = true;
                 }
                 GraphicsDisplay.this.repaint();
             }
 
         }
-    }//Для отслеживания нажатий кнопок мыши    ----------- ПРИДУМАЙ УСЛОВИЕ ВЫКЛЮЧЕНИЯ changeView ------------------------
+    }//Для отслеживания нажатий кнопок мыши
 
     public class MouseMotionHandler implements MouseMotionListener {
         public MouseMotionHandler() {
         }
 
         public void mouseMoved(MouseEvent ev) {
-            GraphicsDisplay.this.selectedMarker = GraphicsDisplay.this.findSelectedPoint(ev.getX(), ev.getY());
-            if (GraphicsDisplay.this.selectedMarker >= 0) {
-                GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(8));
-            } else {
-                GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(0));
-            }
-
+                GraphicsDisplay.this.selectedMarker = GraphicsDisplay.this.findSelectedPoint(ev.getX(), ev.getY());
+                System.out.println("x = " + ev.getX() + " Y = " + ev.getY());
+                if (GraphicsDisplay.this.selectedMarker >= 0) {
+                    GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(8));
+                } else {
+                    GraphicsDisplay.this.setCursor(Cursor.getPredefinedCursor(0));
+                }
+                
             GraphicsDisplay.this.repaint();
         }
 
